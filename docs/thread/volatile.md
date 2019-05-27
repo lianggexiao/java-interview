@@ -1,98 +1,162 @@
-## volatile 关键词的原理及作用？
+# volatile 关键词的原理及作用？
 
-## 微信公众号格式化工具
+在并发编程中, 需要了解线程的三个概念：`原子性`，`可见性`，`有序性`
 
-> 使用微信公众号编辑器有一个十分头疼的问题——粘贴出来的代码，格式错乱，而且特别丑。这块编辑器能够解决这个问题。
+##原子性
 
-**在这里粘贴您的Markdown文档，点击“预览”按钮转换为HTML格式。** 
+`原子性`：即一个操作或者多个操作 要么全部执行并且执行的过程不会被任何因素打断，要么就都不执行。
 
-## 我的公众号
+一个很经典的例子就是银行账户转账问题
 
-![微信公众号](http://blog.didispace.com/css/images/weixin.jpg)
+同样地反映到并发编程中会出现什么结果呢？
+大家想一下假如为一个32位的变量赋值过程不具备原子性的话，会发生什么后果？
 
-## Markdown基础语法
+```java
+i = 9;
+```
 
-下面是Markdown的常用语法示例，可供参考
+假若一个线程执行到这个语句时，我暂且假设为一个32位的变量赋值包括两个过程：为低16位赋值，为高16位赋值。
+那么就可能发生一种情况：当将低16位数值写入之后，突然被中断，而此时又有一个线程去读取i的值，那么读取到的就是错误的数据。
 
-### 代码示例
 
-```javascript
-var OnlineMarkdown = {
-  init: function() {
-    var self = this;
-    self.load().then(function() {
-      self.start()
-    }).fail(function(){
-      self.start();
-    });
-  },
-  start: function() {
-    this.updateOutput();
-  },
-  load: function() {
-    return $.ajax({
-      type: 'GET',
-      url: params.path || './demo.md',
-      dateType: 'text',
-      timeout: 2000
-    }).then(function(data) {
-      $('#input').val(data);
-    });
-  },
-  updateOutput: function () {
-    var val = this.converter.makeHtml($('#input').val());
-    $('#output .wrapper').html(val);
-    PR.prettyPrint();
+##可见性
+`可见性`是指当多个线程访问同一个变量时，一个线程修改了这个变量的值，其他线程能够立即看得到修改的值。
+
+举个简单的例子，看下面这段代码：
+```java
+
+//线程1执行的代码
+
+int i = 0;
+
+i = 10;
+ 
+
+//线程2执行的代码
+
+j = i;
+```
+
+假若执行线程1的是CPU1，执行线程2的是CPU2。由上面的分析可知，当线程1执行 i =10这句时，会先把i的初始值加载到CPU1的高速缓存中，然后赋值为10，那么在CPU1的高速缓存当中i的值变为10了，却没有立即写入到主存当中。
+
+此时线程2执行 j = i，它会先去主存读取i的值并加载到CPU2的缓存当中，注意此时内存当中i的值还是0，那么就会使得j的值为0，而不是10.
+这就是可见性问题，线程1对变量i修改了之后，线程2没有立即看到线程1修改的值。
+
+## 有序性
+`有序性`：即程序执行的顺序按照代码的逻辑顺序执行
+一般虚拟机会对代码执行循序进行重排。虽然重排序不会影响单个线程内程序执行的结果，但是多线程呢？下面看一个例子：
+```java
+//线程1:
+context = loadContext();   //语句1
+inited = true;             //语句2
+ 
+//线程2:
+while(!inited ){
+  sleep()
+}
+doSomethingwithconfig(context);
+```
+
+上面代码中，由于语句1和语句2没有数据依赖性，因此可能会被重排序。假如发生了重排序，在线程1执行过程中先执行语句2，而此是线程2会以为初始化工作已经完成，那么就会跳出while循环，去执行doSomethingwithconfig(context)方法，而此时context并没有被初始化，就会导致程序出错。
+
+从上面可以看出，指令重排序不会影响单个线程的执行，但是会影响到线程并发执行的正确性。
+
+也就是说，要想并发程序正确地执行，必须要保证原子性、可见性以及有序性。只要有一个没有被保证，就有可能会导致程序运行不正确。
+
+
+##volatile作用
+###防止重排序
+从双重检查加锁（DCL)看指令重排序问题。我们先看不加volatile的单例
+```java
+public static Singleton instance;
+public static Singleton getInstance(){
+  if (instance == null)              //1
+  {                                  //2
+    synchronized(Singleton.class) {  //3
+      if (instance == null)          //4
+        instance = new Singleton();  //5
+    }
   }
-};
-
-OnlineMarkdown.init();
+  return instance;
+}
 ```
----
+以上方式存在什么问题？
+初看很完美，步骤3的同步操作保证了多线程的顺序性和可见性，是一个延迟加载的单例
+但实际存在重排序问题。 正常构造对象的方式如下：
 
-上面是 `JavaScript`，下面是 `php`：
+（1）分配内存空间。
 
-```php
-echo 'hello,world'
+（2）初始化对象。
+
+（3）将内存空间的地址赋值给对应的引用。
+
+
+第5步new操作，它可能会被编译器重排序成：
+
+（1）分配内存空间。
+
+（2）将内存空间的地址赋值给对应的引用
+
+（3）初始化对象instance
+
+
+多线程环境下可能将一个未初始化的instance对象引用暴露出来，此时其他线程如果读到instance不是null，它就直接return instance了，这个instance并不是完整对象，很可能就崩溃了。
+
+加`volatile`
+```java
+public volatile static Singleton instance;
+public static Singleton getInstance()
+{
+  if (instance == null)              //1
+  {                                  //2
+    synchronized(Singleton.class) {  //3
+      if (instance == null)          //4
+        instance = new Singleton();  //5
+    }
+  }
+  return instance;
+}
 ```
+`volatile`根据jsr133规范,它可以禁止编译器对初始化instance对象的重排序，从而保证了创建对象的流程以及可见性
 
-### 表格示例
+###可见性
+可见性问题主要指一个线程修改了共享变量值，而另一个线程却看不到。引起可见性问题的主要原因是每个线程拥有自己的一个高速缓存区——线程工作内存。volatile关键字能有效的解决这个问题。
 
-| 品类 | 个数 | 备注 |
-|-----|-----|------|
-| 苹果 | 1   | nice |
-| 橘子 | 2   | job |
+###原子性
+关于原子性的问题，volatile只能保证对单次读/写的原子性。
+`volatile`只能保证可见性不能保证原子性，但用`volatile`修饰`long`和`double`可以保证其操作原子性。因为
+long和double两种数据类型的操作可分为高32位和低32位两部分，因此普通的long或double类型读/写
+可能不是原子的。因此，鼓励大家将共享的long和double变量设置为`volatile`类型，这样能保证任何情
+况下对long和double的单次读/写操作都具有原子性。
+
+
+##volatile关键字原理
+###可见性实现：
+在前文中已经提及过，线程本身并不直接与主内存进行数据的交互，而是通过线程的工作内存来完成相应的操作。这也是导致线程间数据不可见的本质原因。因此要实现`volatile`变量的可见性，直接从这方面入手即可。对volatile变量的写操作与普通变量的主要区别有两点：
+
+（1）修改`volatile`变量时会强制将修改后的值刷新的主内存中。
+
+（2）修改`volatile`变量后会导致其他线程工作内存中对应的变量值失效。因此，再读取该变量值的时候就需要重新从读取主内存中的值。
+通过这两个操作，就可以解决volatile变量的可见性问题。
 
 
 
----
+###有序性实现：
+Java中的happen-before规则
 
-以上是用的比较多的，还装了几十个使用频度比较低的插件，主要包括 Snippet 和文件高亮配置，可以在这里查看：<https://gist.github.com/barretlee/a5170eb6ca1805f66687063d2e3a4983>，你也可以通过 `Settings Sync` 将这个配置下载下来，id 就是后面半截：`a5170eb6ca1805f66687063d2e3a4983`。
+内存屏障
+为了实现volatile可见性和happen-before的语义。JVM底层是通过一个叫做“内存屏障”的东西来完成。内存屏障，也叫做内存栅栏，是一组处理器指令，用于实现对内存操作的顺序限制。插入了内存屏障，就不会再重排序了。
 
-### 在命令行打开 VSC
 
-在安装好 VSC 后，直接配置 `.bash_profile` 或者 `.zshrc` 文件：
-
-```bash
-alias vsc='/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code';
-VSC_BIN='/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin';
-PATH=$VSC_BIN:$PATH;
-export PATH;
+##应用场景
+###1.状态标记量* 防止重排序
+```java
+volatile boolean flag = false;
+while(!flag){
+    doSomething();
+}
+public void setFlag() {
+    flag = true;
+}  
 ```
-
-然后让配置生效，在控制台执行：
-
-```bash
-# 如果没有安装 zsh，可能是 ~/.bash_profile
-source ~/.zshrc 
-```
-
-这个时候就可以在全局打开了：
-
-```bash
-# -a 的意思是不要新开窗口，在当前已经打开的 vsc 中打开文件
-vsc path/to/file.ext -a 
-```
-
-有同学提到，VSC 的面板上搜索 `install` 就可以在命令行安装 `code` 这个命令了，不过我更喜欢使用 `vsc` 来打开文件，这也算是折腾吧 ；）
-
+###2.double check  如上面的单例  
