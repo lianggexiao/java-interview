@@ -17,10 +17,10 @@
 
 线程安全的，避免某些情况需要考虑线程安全必须同步带来的性能损失。
 
-`ThreadLocal`为解决多线程程序的并发问题提供了一种新的思路。但是ThreadLocal也有局限性，每个线程往ThreadLocal中读写数据是线程隔离，互相之间不会影响的，所以`ThreadLocal`无法解决共享对象的更新问题！由于不需要共享信息，自然就不存在竞争问题了，从而保证了某些情况下线程的安全，以及避免了某些情况需要考虑线程安全必须同步带来的性能损失！！！
+`ThreadLocal`为解决多线程程序的并发问题提供了一种新的思路。但是ThreadLocal也有局限性，每个线程往`ThreadLocal`中读写数据是线程隔离，互相之间不会影响的，所以`ThreadLocal`无法解决共享对象的更新问题！由于不需要共享信息，自然就不存在竞争问题了，从而保证了某些情况下线程的安全，以及避免了某些情况需要考虑线程安全必须同步带来的性能损失！！！
 
 这类场景阿里规范里面也提到了，如图：
-![](https://github.com/lianggexiao/java-interview/blob/master/img/ThreadLocal1.jpg)
+![](https://github.com/lianggexiao/java-interview/blob/master/img/threadLocal1.jpg)
 
 应用举例：
 ```java
@@ -69,17 +69,17 @@ public class ThreadLocalTest {
 
 因为一个线程内可以存在多个` ThreadLocal` 对象，所以其实是 ThreadLocal 内部维护了一个 Map ，这个 Map 不是直接使用的 HashMap ，而是 `ThreadLocal `实现的一个叫做 ThreadLocalMap 的静态内部类。而我们使用的 get()、set() 方法其实都是调用了这个ThreadLocalMap类对应的 get()、set() 方法。
 
-Thread类有属性变量threadLocals （类型是ThreadLocal.ThreadLocalMap），也就是说每个线程有一个自己的ThreadLocalMap ，所以每个线程往这个ThreadLocal中读写隔离的，并且是互相不会影响的。一个ThreadLocal只能存储一个Object对象，如果需要存储多个Object对象那么就需要多个ThreadLocal。
+`Thread`类有属性变量threadLocals （类型是ThreadLocal.ThreadLocalMap），也就是说每个线程有一个自己的`ThreadLocalMap` ，所以每个线程往这个`ThreadLocal`中读写隔离的，并且是互相不会影响的。一个ThreadLocal只能存储一个Object对象，如果需要存储多个Object对象那么就需要多个ThreadLocal。
 
-java对象的引用包括 ：强引用，软引用，弱引用，虚引用 。
+### java对象的引用包括 ：强引用，软引用，弱引用，虚引用 。
 
 因为这里涉及到弱引用，简单说明下：
 
 弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，该对象仅仅被弱引用关联，那么就会被回收。
 
-当仅仅只有ThreadLocalMap中的Entry的key指向ThreadLocal的时候，ThreadLocal会进行回收的！！！
+当仅仅只有`ThreadLocalMap`中的Entry的key指向`ThreadLocal`的时候，`ThreadLocal`会进行回收的！！！
 
-ThreadLocal被垃圾回收后，在ThreadLocalMap里对应的Entry的键值会变成null，但是Entry是强引用，那么Entry里面存储的Object，并没有办法进行回收，所以ThreadLocalMap 做了一些额外的回收工作。
+`ThreadLocal`被垃圾回收后，在`ThreadLocalMap`里对应的Entry的键值会变成null，但是Entry是强引用，那么Entry里面存储的Object，并没有办法进行回收，所以`ThreadLocalMap` 做了一些额外的回收工作。
 
 所以ThreadLocal最佳实践，应该在我们不使用的时候，主动调用remove方法进行清理。
 
