@@ -1,4 +1,4 @@
-# ThreadLocal用在什么地方？
+## ThreadLocal用在什么地方？
 
 讨论`ThreadLocal`用在什么地方前，我们先明确下，如果仅仅就一个线程，那么都不用谈`ThreadLocal`的，`ThreadLocal`是用在多线程的场景的！
 `ThreadLocal`归纳下来就2类用途：
@@ -63,7 +63,7 @@ public class ThreadLocalTest {
     }
 }
 ```
-# 设计原理
+## 设计原理
 
 首先 `ThreadLocal `是一个泛型类，保证可以接受任何类型的对象。
 
