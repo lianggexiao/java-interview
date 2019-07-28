@@ -36,7 +36,7 @@
 类名一致类加载器不一致也不是同一个类(eaquels false)
 类名一致类加载器一致但是类加载器实例不一致也不是同一个类。
 
-案例:
+### 案例:
 在web应用中假如部署了多个webapp. 为了方便共享就预先在Tomcat lib里面内置了部分类比如Spring、JDBC。而用户自备也有类似的Jar包。 这样会引起什么样的冲突？
 
 答案是不会冲突。
@@ -44,9 +44,9 @@
 `Tomcat`提供了一个Child优先的类加载机制：首先由子类去加载， 加载不到再由父类加载。就很好的规避了这个问题。WEB-INF/lib 目录下的类的加载优先级是优于Tomcat lib的。（配置文件在`server.xml`里面的<Loader delegate ="false"/> default false）上。
 
 针对`Tomcat`， 做一个加载路径的介绍：
--Tomcat起始于catalina.sh里面的命令 java org.apache.catalina.startup.Bootstrap start
+- Tomcat起始于catalina.sh里面的命令 java org.apache.catalina.startup.Bootstrap start
 
--因为显式的指定了java命令，因此
+- 因为显式的指定了java命令，因此
 
 - `BootstrapClassLoader`负责加载${JAVA_HOME}/jre/lib部分jar包
 
@@ -54,19 +54,19 @@
 
 - `AppClassLoader`加载bootstrap.jar和tomcat-juli.jar （只显示的指定了这两个jar包）
 
--之后Tomcat通过初始化了三个`URLClassLoader`, 并指定加载路径 （见catalina.properties#common.loader配置）
+- 之后Tomcat通过初始化了三个`URLClassLoader`, 并指定加载路径 （见catalina.properties#common.loader配置）
 
--除了`common`外， server和shardLoader的加载路径一般都没有显示的指定， 因此这三个Loader实际上都是`URLClassLoader`。
+- 除了`common`外， server和shardLoader的加载路径一般都没有显示的指定， 因此这三个Loader实际上都是`URLClassLoader`。
 
--同时，它顺便指定了当前线程的`contextClassLoader`。
+- 同时，它顺便指定了当前线程的`contextClassLoader`。
 
--`Tomcat`对于WEB应用的启动都是依赖于web.xml的， 里面配置的Filter、Listener、Servlet根据Tomcat的定义都是由`WebappClassLoaderBase`来加载的。
+- `Tomcat`对于WEB应用的启动都是依赖于web.xml的， 里面配置的Filter、Listener、Servlet根据Tomcat的定义都是由`WebappClassLoaderBase`来加载的。
 
--毕竟`Filter`、`Listener`、`Servlet`等入口都是被`WebappClassLoaderBase`加载的，而一般开发者不会主动指定`ClassLoader`。那么除非指定了ClassLoader，所有的webapp都是它加载的（刚好它的加载空间包含了这些类）
+- 毕竟`Filter`、`Listener`、`Servlet`等入口都是被`WebappClassLoaderBase`加载的，而一般开发者不会主动指定`ClassLoader`。那么除非指定了ClassLoader，所有的webapp都是它加载的（刚好它的加载空间包含了这些类）
 
--在需要Spring的时候已经由App自身加载得到， 就不会再去寻找Tomcat lib里面的Spring。
+- 在需要Spring的时候已经由App自身加载得到， 就不会再去寻找Tomcat lib里面的Spring。
 
--自此，Tomcat的类加载区分完毕。 通过 “子优先” 这个机制，可以保证多个 Tomcat App 之间做到良好的隔离。
+- 自此，Tomcat的类加载区分完毕。 通过 “子优先” 这个机制，可以保证多个 Tomcat App 之间做到良好的隔离。
 
 `contextClassLoader`
 > Thread.currentThread().getContextClassLoader()一般有两个用处：给SPI用， 找配置文件用。
@@ -84,16 +84,16 @@ UserClassLoader -> AppClassLoader->ExtClassLoader -> Bootstrap
 情况反过来，右边的`ClassLoader`所加载的代码需要反过来去找委派链靠左边的`ClassLoader`去加载东西怎么办呢？
 没辙，双亲委托机制是单向的，没办法反过来从右边找左边。
 
-###解决方案：
+### 解决方案：
 > ServiceLoader.load(Class.class); 在加载类的时候， ServiceLoader由BootStrap加载，而一般的SPI都是在用户的classpath下。鉴于方法调用默认是使用的调用类的ClassLoader去加载， 显然BootStrap是加载不了没在它的路径下的Class的， 这个时候就可以传入一个Thread.currentThread().getContextClassLoader()， 就可以很轻松的找到资源文件.
 
 ### 找文件用处
 这个跟上诉的SPI机制其实也差不多， 都是每个ClassLoader负责一定的区域， 如果当前区域找不到再使用线程的Loader去找。
 比如在Tomcat中执行一个 new File(), 会不会发现文件到${catalina.home}/bin里面去了？
 
-##类加载的顺序
+## 类加载的顺序
 
-###老生常谈：
+### 老生常谈：
 
 1. 装载：查找和导入Class文件；
 2. 链接：把类的二进制数据合并到JRE中；
@@ -136,6 +136,7 @@ public class Useless {
 - 准备即为 s2 和 num 赋值 null 和 0。
 
 - 解析, Java虚拟机会把类的二级制数据中的符号引用替换为直接引用。
+
 - 初始化即另s2得到值，令num得到3。
 
 > 可以看到， 类加载的整个过程跟域变量和代码块都是没什么关系的
@@ -161,8 +162,11 @@ String sql = "SELECT id, name, url, comment FROM blog";
 ResultSet rs = stmt.executeQuery(sql);
 ```
 而且一般也不要改什么代码，直接换个数据库连接就行了，这其实就是SPI机制。
+
 SPI机制详细解析参考：<https://www.cnblogs.com/chanshuyi/p/deep_insight_java_spi.html>
+
 SPI机制实例：<https://github.com/chenyurong/song-parser-spi-demo>
+
 
 `Java SPI `无处不在，通过使用 SPI 能够让框架的实现更加优雅，实现可插拔的插件开发。
 
