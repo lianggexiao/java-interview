@@ -19,7 +19,7 @@
 
      - 每个`Classloader`都有自己的加载区域，需要注意部分配置文件的存放地点。
 
-** 加载顺序 **
+**加载顺序**
 - `BootstrapClassLoader`加载${JAVA_HOME}/jre/lib 下面的部分jar包。比如java.*、sun.*
 
 - `ExtClassLoader`加载${JAVA_HOME}/jre/lib/ext下面的jar包。比如javax.*
@@ -39,7 +39,7 @@
 ### 案例:
 在web应用中假如部署了多个webapp. 为了方便共享就预先在Tomcat lib里面内置了部分类比如Spring、JDBC。而用户自备也有类似的Jar包。 这样会引起什么样的冲突？
 
-答案是不会冲突。
+### 答案是不会冲突。
 
 `Tomcat`提供了一个Child优先的类加载机制：首先由子类去加载， 加载不到再由父类加载。就很好的规避了这个问题。WEB-INF/lib 目录下的类的加载优先级是优于Tomcat lib的。（配置文件在`server.xml`里面的<Loader delegate ="false"/> default false）上。
 
@@ -73,7 +73,7 @@
 
 ### SPI用处(后面会说何为SPI)
 之前讲解过java的委托加载机制如图：
-![类加载机制](https://github.com/lianggexiao/java-interview/tree/master/img/jvm_classload1.png)
+![](https://github.com/lianggexiao/java-interview/blob/master/img/jvm_classload1.png)
 
 UserClassLoader -> AppClassLoader->ExtClassLoader -> Bootstrap
 
