@@ -7,7 +7,7 @@
 
 
 ### Java 多线程
-- [ReentrantLock%20实现原理](https://github.com/lianggexiao/java-interview/tree/master/docs/thread/ReentrantLock%20实现原理.md)
+- [ReentrantLock 实现原理](https://github.com/lianggexiao/java-interview/tree/master/docs/thread/ReentrantLock%20实现原理.md)
 - [ThreadLocal原理和应用](https://github.com/lianggexiao/java-interview/tree/master/docs/thread/ThreadLocal原理和应用.md)
 - [volatile](https://github.com/lianggexiao/java-interview/tree/master/docs/thread/volatile.md)
 - [如何避免ConcurrentModifyException](https://github.com/lianggexiao/java-interview/tree/master/docs/thread/如何避免ConcurrentModifyException.md)
